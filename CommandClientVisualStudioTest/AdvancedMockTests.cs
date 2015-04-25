@@ -6,6 +6,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Proshot.CommandClient;
 using Rhino.Mocks;
 using System.Linq;
+using System.Diagnostics;
 
 namespace CommandClientVisualStudioTest
 {
@@ -66,7 +67,23 @@ namespace CommandClientVisualStudioTest
         [TestMethod]
         public void TestUserExitCommandWithoutMocks()
         {
-            Assert.Fail("Not yet implemented");
+            IPAddress ipaddress = IPAddress.Parse("127.0.0.1");
+            Command command = new Command(CommandType.UserExit, ipaddress, null);
+            System.IO.MemoryStream fakeStream = new MemoryStream();
+
+            CMDClient client = new CMDClient(null, "Bogus network name");
+            
+            // we need to set the private variable here
+            client.GetType().GetField("networkStream", BindingFlags.NonPublic | BindingFlags.Instance).SetValue(client, fakeStream);
+
+            client.SendCommandToServerUnthreaded(command);
+
+            byte[] expected = { 0, 0, 0, 0, 9, 0, 0, 0, 49, 50, 55, 46, 48, 46, 48, 46, 49, 2, 0, 0, 0, 10, 0 };
+            byte[] result = new byte[23];
+            fakeStream.Seek(0, SeekOrigin.Begin);
+            fakeStream.Read(result, 0, 23);
+
+            CollectionAssert.AreEqual(expected, result);
         }
 
         [TestMethod]
